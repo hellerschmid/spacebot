@@ -26,11 +26,15 @@ async def cmd_unblock(ctx: CommandContext) -> str:
 
     room_id = ctx.args[1] if len(ctx.args) > 1 else None
 
-    if room_id and not (room_id.startswith("!") or room_id.startswith("#")):
-        return (
-            f"Invalid room ID format: {room_id}\n"
-            "Must be like !room_id:server or #alias:server"
-        )
+    if room_id:
+        colon_index = room_id.find(":")
+        has_valid_prefix = room_id.startswith("!") or room_id.startswith("#")
+        has_server = colon_index > 0 and bool(room_id[colon_index + 1 :])
+        if not (has_valid_prefix and has_server):
+            return (
+                f"Invalid room ID format: {room_id}\n"
+                "Must be like !room_id:server or #alias:server"
+            )
 
     removed = await ctx.db.remove_user_block(user_id, room_id)
 

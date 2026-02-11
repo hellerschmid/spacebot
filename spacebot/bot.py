@@ -44,6 +44,7 @@ async def login_with_retry(
                 f"(retry_after_ms={retry_after_ms}, max_retries={max_retries})"
             )
             if config.login_max_retries <= 0 or attempt < config.login_max_retries:
+                await asyncio.sleep(retry_after_ms / 1000)
                 continue
 
         raise RuntimeError(
@@ -116,6 +117,7 @@ async def main() -> None:
     # Create Matrix client and log in
     print("[connect] creating Matrix client")
     client = AsyncClient(config.homeserver, config.bot_user)
+    invite_worker_task: asyncio.Task[None] | None = None
 
     try:
         login_resp = await login_with_retry(client, config)
@@ -199,6 +201,15 @@ async def main() -> None:
                 await asyncio.sleep(3)
 
     finally:
+        if invite_worker_task is not None:
+            invite_worker_task.cancel()
+            try:
+                await asyncio.wait_for(invite_worker_task, timeout=5)
+            except asyncio.CancelledError:
+                # Expected when awaiting a cancelled worker task.
+                pass
+            except Exception as exc:
+                print(f"[shutdown] invite worker shutdown issue: {exc!r}")
         await db.close()
         await client.close()
         print("[shutdown] bot stopped")

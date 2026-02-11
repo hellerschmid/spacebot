@@ -129,7 +129,7 @@ async def dispatch(ctx: CommandContext) -> None:
         await send_notice(
             ctx.client,
             ctx.room_id,
-            f"Error executing {prefix}{command_name}: {exc}",
+            f"An internal error occurred while executing {prefix}{command_name}. The team has been notified.",
         )
 
 

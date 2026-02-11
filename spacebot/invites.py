@@ -146,19 +146,23 @@ async def wait_for_invite_acceptance(
         state.invite_accept_events[key] = event
 
     timeout = config.invite_acceptance_timeout_seconds
-    if timeout > 0:
-        try:
-            await asyncio.wait_for(event.wait(), timeout=timeout)
-            return True
-        except asyncio.TimeoutError:
-            print(
-                f"[invite-queue] timed out waiting for {user_id} to accept invite "
-                f"to {room_id} (timeout={timeout}s)"
-            )
-            return False
+    try:
+        if timeout > 0:
+            try:
+                await asyncio.wait_for(event.wait(), timeout=timeout)
+                return True
+            except asyncio.TimeoutError:
+                print(
+                    f"[invite-queue] timed out waiting for {user_id} to accept invite "
+                    f"to {room_id} (timeout={timeout}s)"
+                )
+                return False
 
-    await event.wait()
-    return True
+        await event.wait()
+        return True
+    finally:
+        if state.invite_accept_events.get(key) is event:
+            state.invite_accept_events.pop(key, None)
 
 
 async def process_invite_queue(
