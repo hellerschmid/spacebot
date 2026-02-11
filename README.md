@@ -11,7 +11,7 @@ uv run python -m spacebot
 
 ## Generate Version File
 
-Current Version: `0.3.1.638`
+Current Version: `0.3.1.672`
 
 Generate a `.version` file at the project root from the latest git commit time:
 
