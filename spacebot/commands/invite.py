@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from spacebot.commands import CommandContext, register
 from spacebot.invites import queue_user_for_invites
+from spacebot.validation import validate_room_ref, validate_user_id
 
 
 @register(
@@ -19,16 +20,26 @@ async def cmd_invite(ctx: CommandContext) -> str:
         )
 
     user_id = ctx.args[0]
-    if not user_id.startswith("@") or ":" not in user_id:
+    user_ok, user_error = validate_user_id(user_id)
+    if not user_ok:
         return (
             f"Invalid user ID format: {user_id}\n"
-            "Must be like @user:server.com"
+            f"{user_error}"
         )
 
     # Optional space filter
     space_filter = ctx.args[1] if len(ctx.args) > 1 else None
 
     if space_filter:
+        space_ok, space_error = validate_room_ref(
+            space_filter, allow_shorthand_alias=False
+        )
+        if not space_ok:
+            return (
+                f"Invalid space ID format: {space_filter}\n"
+                f"{space_error}"
+            )
+
         # Queue for a specific space
         target_rooms = await ctx.db.get_target_rooms_for_space(space_filter)
         if not target_rooms:

@@ -5,6 +5,11 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Awaitable, Callable
 
 from spacebot.authz import is_authorized_for_commands
+from spacebot.validation import (
+    validate_args,
+    validate_command_name,
+    validate_message_payload,
+)
 
 if TYPE_CHECKING:
     from nio import AsyncClient
@@ -87,20 +92,58 @@ async def send_notice(client: AsyncClient, room_id: str, text: str) -> None:
 async def dispatch(ctx: CommandContext) -> None:
     """Parse a command message and invoke the appropriate handler."""
     prefix = ctx.config.command_prefix
-    body = ctx.raw_body.strip()
-
+    body = ctx.raw_body
     if not body.startswith(prefix):
         return
 
     remainder = body[len(prefix):]
-    parts = remainder.split(maxsplit=1)
-    command_name = parts[0].lower() if parts else ""
+    payload_ok, payload_error = validate_message_payload(remainder)
+    if not payload_ok:
+        await send_notice(
+            ctx.client,
+            ctx.room_id,
+            f"Invalid command format: {payload_error} Try {prefix}help",
+        )
+        return
+
+    command_token, separator, arg_text = remainder.partition(" ")
+    name_ok, name_error = validate_command_name(command_token)
+    if not name_ok:
+        await send_notice(
+            ctx.client,
+            ctx.room_id,
+            f"Invalid command format: {name_error} Try {prefix}help",
+        )
+        return
+
+    if separator and arg_text.startswith(" "):
+        await send_notice(
+            ctx.client,
+            ctx.room_id,
+            f"Invalid command format: unsupported whitespace. Try {prefix}help",
+        )
+        return
+
+    command_name = command_token.lower()
 
     try:
-        ctx.args = shlex.split(parts[1]) if len(parts) > 1 else []
+        ctx.args = shlex.split(arg_text) if separator else []
     except ValueError:
-        # Fall back to simple split if shlex fails (unmatched quotes, etc.)
-        ctx.args = parts[1].split() if len(parts) > 1 else []
+        await send_notice(
+            ctx.client,
+            ctx.room_id,
+            f"Invalid command arguments. Try {prefix}help",
+        )
+        return
+
+    args_ok, args_error = validate_args(ctx.args)
+    if not args_ok:
+        await send_notice(
+            ctx.client,
+            ctx.room_id,
+            f"Invalid command arguments: {args_error}",
+        )
+        return
 
     cmd = _commands.get(command_name)
     if cmd is None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from spacebot.commands import CommandContext, register
+from spacebot.validation import validate_room_ref, validate_user_id
 
 
 @register(
@@ -18,22 +19,21 @@ async def cmd_unblock(ctx: CommandContext) -> str:
         )
 
     user_id = ctx.args[0]
-    if not user_id.startswith("@") or ":" not in user_id:
+    user_ok, user_error = validate_user_id(user_id)
+    if not user_ok:
         return (
             f"Invalid user ID format: {user_id}\n"
-            "Must be like @user:server.com"
+            f"{user_error}"
         )
 
     room_id = ctx.args[1] if len(ctx.args) > 1 else None
 
     if room_id:
-        colon_index = room_id.find(":")
-        has_valid_prefix = room_id.startswith("!") or room_id.startswith("#")
-        has_server = colon_index > 0 and bool(room_id[colon_index + 1 :])
-        if not (has_valid_prefix and has_server):
+        room_ok, room_error = validate_room_ref(room_id, allow_shorthand_alias=False)
+        if not room_ok:
             return (
                 f"Invalid room ID format: {room_id}\n"
-                "Must be like !room_id:server or #alias:server"
+                f"{room_error}"
             )
 
     removed = await ctx.db.remove_user_block(user_id, room_id)

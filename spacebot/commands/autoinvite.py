@@ -7,6 +7,7 @@ from spacebot.invites import (
     refresh_room_caches,
 )
 from spacebot.utils import is_error_response, resolve_room_ref
+from spacebot.validation import validate_room_ref
 
 
 @register(
@@ -64,9 +65,31 @@ async def _handle_add(ctx: CommandContext) -> str:
             f"#myspace #general"
         )
 
+    raw_space_ref = ctx.args[1]
+    raw_target_ref = ctx.args[2]
+    space_ok, space_error = validate_room_ref(
+        raw_space_ref, allow_shorthand_alias=True
+    )
+    if not space_ok:
+        return f"Invalid space reference: {raw_space_ref}\n{space_error}"
+    target_ok, target_error = validate_room_ref(
+        raw_target_ref, allow_shorthand_alias=True
+    )
+    if not target_ok:
+        return f"Invalid target room reference: {raw_target_ref}\n{target_error}"
+
     sn = _server_name(ctx)
-    space_ref = _expand_ref(ctx.args[1], sn)
-    target_ref = _expand_ref(ctx.args[2], sn)
+    space_ref = _expand_ref(raw_space_ref, sn)
+    target_ref = _expand_ref(raw_target_ref, sn)
+
+    space_ok, space_error = validate_room_ref(space_ref, allow_shorthand_alias=False)
+    if not space_ok:
+        return f"Invalid space reference: {space_ref}\n{space_error}"
+    target_ok, target_error = validate_room_ref(
+        target_ref, allow_shorthand_alias=False
+    )
+    if not target_ok:
+        return f"Invalid target room reference: {target_ref}\n{target_error}"
 
     # Resolve space reference
     space_id = await resolve_room_ref(ctx.client, space_ref, "space", server_name=sn)
@@ -77,6 +100,19 @@ async def _handle_add(ctx: CommandContext) -> str:
     target_id = await resolve_room_ref(ctx.client, target_ref, "target room", server_name=sn)
     if not target_id:
         return f"Could not resolve target room: {target_ref}"
+
+    # Validate that both rooms are reachable before persisting the rule.
+    # This prevents storing rules for non-existent or inaccessible spaces/rooms.
+    if not await ensure_joined_room(ctx.client, ctx.bot_state, space_id, "space"):
+        return (
+            f"Could not access space: {space_ref}\n"
+            "Make sure the space exists and the bot can join it."
+        )
+    if not await ensure_joined_room(ctx.client, ctx.bot_state, target_id, "target"):
+        return (
+            f"Could not access target room: {target_ref}\n"
+            "Make sure the room exists and the bot can join it."
+        )
 
     # Store the rule
     created = await ctx.db.add_autoinvite_rule(
@@ -95,8 +131,6 @@ async def _handle_add(ctx: CommandContext) -> str:
 
     # Refresh caches and join rooms
     await refresh_room_caches(ctx.db, ctx.bot_state)
-    await ensure_joined_room(ctx.client, ctx.bot_state, space_id, "space")
-    await ensure_joined_room(ctx.client, ctx.bot_state, target_id, "target")
 
     # Get display names
     space_name = await _room_label(ctx, space_id)
@@ -118,9 +152,31 @@ async def _handle_remove(ctx: CommandContext) -> str:
             f"#myspace #general"
         )
 
+    raw_space_ref = ctx.args[1]
+    raw_target_ref = ctx.args[2]
+    space_ok, space_error = validate_room_ref(
+        raw_space_ref, allow_shorthand_alias=True
+    )
+    if not space_ok:
+        return f"Invalid space reference: {raw_space_ref}\n{space_error}"
+    target_ok, target_error = validate_room_ref(
+        raw_target_ref, allow_shorthand_alias=True
+    )
+    if not target_ok:
+        return f"Invalid target room reference: {raw_target_ref}\n{target_error}"
+
     sn = _server_name(ctx)
-    space_ref = _expand_ref(ctx.args[1], sn)
-    target_ref = _expand_ref(ctx.args[2], sn)
+    space_ref = _expand_ref(raw_space_ref, sn)
+    target_ref = _expand_ref(raw_target_ref, sn)
+
+    space_ok, space_error = validate_room_ref(space_ref, allow_shorthand_alias=False)
+    if not space_ok:
+        return f"Invalid space reference: {space_ref}\n{space_error}"
+    target_ok, target_error = validate_room_ref(
+        target_ref, allow_shorthand_alias=False
+    )
+    if not target_ok:
+        return f"Invalid target room reference: {target_ref}\n{target_error}"
 
     # Resolve references
     space_id = await resolve_room_ref(ctx.client, space_ref, "space", server_name=sn)

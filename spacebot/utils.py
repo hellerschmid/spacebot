@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections import Counter
 from typing import TYPE_CHECKING
 
+from spacebot.validation import validate_room_ref
+
 if TYPE_CHECKING:
     from nio import AsyncClient
 
@@ -73,6 +75,13 @@ async def resolve_room_ref(
       - ``#alias`` (shorthand) — expanded to ``#alias:server_name``,
         then resolved.  Requires *server_name* to be provided.
     """
+    is_valid, validation_error = validate_room_ref(
+        room_ref, allow_shorthand_alias=True
+    )
+    if not is_valid:
+        print(f"[config] invalid {label}: {room_ref}. {validation_error}")
+        return None
+
     if room_ref.startswith("!"):
         return room_ref
 
@@ -88,6 +97,15 @@ async def resolve_room_ref(
             expanded = f"{room_ref}:{server_name}"
             print(f"[config] expanded {room_ref} -> {expanded}")
             room_ref = expanded
+            is_valid, validation_error = validate_room_ref(
+                room_ref, allow_shorthand_alias=False
+            )
+            if not is_valid:
+                print(
+                    f"[config] invalid expanded {label}: {room_ref}. "
+                    f"{validation_error}"
+                )
+                return None
 
         print(f"[config] resolving {label} alias {room_ref}...")
         resolve_resp = await client.room_resolve_alias(room_ref)
@@ -105,14 +123,6 @@ async def resolve_room_ref(
             return None
         print(f"[config] resolved {room_ref} -> {resolved_room_id}")
         return resolved_room_id
-
-    if room_ref.startswith("@"):
-        print(
-            f"[config] invalid {label}: {room_ref}. "
-            "This looks like a user ID; "
-            "use !room_id:server, #alias:server, or #alias."
-        )
-        return None
 
     print(
         f"[config] invalid {label}: {room_ref}. "
