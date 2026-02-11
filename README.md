@@ -9,6 +9,55 @@ uv sync
 uv run python -m spacebot
 ```
 
+## Docker Deploy
+
+### 1) Create a `.env`
+
+Create a `.env` file next to your `docker-compose.yml`:
+
+```env
+# Required
+MATRIX_HOMESERVER=https://matrix.example.com
+MATRIX_USER=@spacebot:example.com
+MATRIX_PASSWORD=REPLACE_ME
+
+# Optional (defaults shown in README)
+RECONCILE_INTERVAL_CYCLES=20
+LOGIN_MAX_RETRIES=5
+INVITE_ACCEPTANCE_TIMEOUT_SECONDS=0
+SPACEBOT_COMMAND_PREFIX=!!
+SPACEBOT_COMMAND_MIN_POWER_LEVEL=50
+
+# Recommended for persistence
+SPACEBOT_DB_PATH=/data/spacebot.db
+```
+
+### 2) Create a `docker-compose.yml`
+
+```yaml
+services:
+  spacebot:
+    image: hellerschmid/spacebot:latest
+    container_name: spacebot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./spacebot-data:/data
+```
+
+### 3) Start
+
+```bash
+docker compose up -d
+```
+
+Logs:
+
+```bash
+docker compose logs -f spacebot
+```
+
 ## Environment Variables
 
 ### Required
