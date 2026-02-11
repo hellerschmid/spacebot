@@ -1,0 +1,11 @@
+[project]
+name = "spacebot"
+version = "0.1.0"
+description = "Matrix bot that auto-invites users to rooms when they join a Space"
+requires-python = ">=3.14"
+dependencies = [
+    "matrix-nio>=0.25.2",
+]
+
+[project.scripts]
+spacebot = "space_auto_invite_bot:main"
