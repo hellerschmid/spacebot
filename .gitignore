@@ -215,3 +215,4 @@ launch.json
 *.db-journal
 *.db-wal
 *.db-shm
+.version
