@@ -9,6 +9,22 @@ uv sync
 uv run python -m spacebot
 ```
 
+## Generate Version File
+
+Current Version: `0.30.1.625`
+
+Generate a `.version` file at the project root from the latest git commit time:
+
+```bash
+uv run python -m spacebot.versioning
+```
+
+Optional flags:
+
+```bash
+uv run python -m spacebot.versioning --major 1 --minor 0 --project-start-date 2025-11-14 --output .version
+```
+
 ## Docker Deploy
 
 ### 1) Create a `.env`
