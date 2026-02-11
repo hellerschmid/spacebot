@@ -22,7 +22,7 @@ uv run python -m spacebot.versioning
 Optional flags:
 
 ```bash
-uv run python -m spacebot.versioning --major 1 --minor 0 --project-start-date 2025-11-14 --output .version
+uv run python -m spacebot.versioning --major 1 --minor 0 --project-start-date 2026-02-10 --output .version
 ```
 
 ## Docker Deploy
