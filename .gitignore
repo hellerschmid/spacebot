@@ -208,3 +208,10 @@ __marimo__/
 
 # Ignore Claude settings
 .claude/
+launch.json
+
+# Spacebot database
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
